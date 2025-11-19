@@ -5,7 +5,23 @@ const navLinks = ["Shop", "About", "Contact"];
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const toggleMenu = () => setIsOpen(prev => !prev);
+  const toggleMenu = () => {
+  setIsOpen(prev => {
+    const newState = !prev;
+
+    if (newState) {
+      // When menu opens → lock body scrolling
+      document.body.style.overflow = "hidden";
+      document.body.style.height = "100vh";
+    } else {
+      // When menu closes → restore scroll
+      document.body.style.overflow = "auto";
+      document.body.style.height = "auto";
+    }
+
+    return newState;
+  });
+};
 
   return (
     <>
@@ -43,13 +59,14 @@ const Navbar: React.FC = () => {
       </header>
 
       {/* FULLSCREEN SLIDE MENU */}
-      <div
+     <div
         className={`
-          fixed inset-0 z-50 bg-[#F7F3E8] md:hidden
-          transform transition-transform duration-300 ease-out
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
+            fixed inset-0 z-50 bg-[#F7F3E8] md:hidden
+            transform transition-transform duration-300 ease-out
+            h-screen w-full overflow-y-hidden
+            ${isOpen ? "translate-x-0" : "translate-x-full"}
         `}
-      >
+        >
 
         {/* TOP ROW INSIDE MENU */}
         <div className="flex items-center justify-between px-6 py-4">
