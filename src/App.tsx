@@ -9,7 +9,7 @@ function App() {
         <h1 className="mb-6 text-3xl font-semibold">Clothing Store Homepage</h1>
 
         <p className="mb-4 text-gray-700">
-          No left/right space now. Everything edge-to-edge.
+          No left/right space now.  edge-to-edge.
         </p>
 
         <div className="space-y-4">
