@@ -66,6 +66,7 @@ const Navbar: React.FC = () => {
             h-screen w-full overflow-y-hidden
             ${isOpen ? "translate-x-0" : "translate-x-full"}
         `}
+        
         >
 
         {/* TOP ROW INSIDE MENU */}
