@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
   const verifyOtp = async () => {
     if (!otp) return alert("Enter OTP");
     try {
-      const data = await confirmation.confirm(otp);
+      // const data = await confirmation.confirm(otp);
 
       alert("OTP Verified!");
       setShowLogin(false);
