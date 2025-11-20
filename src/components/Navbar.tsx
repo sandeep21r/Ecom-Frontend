@@ -1,4 +1,4 @@
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "./firebase";
+import { auth, RecaptchaVerifier } from "./firebase";
 import { useState, useEffect } from "react";
 
 const navLinks = ["Shop", "About", "Contact"];
@@ -9,7 +9,7 @@ const Navbar: React.FC = () => {
   const [otpStage, setOtpStage] = useState<"options" | "phone" | "otp">("options");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [confirmation, setConfirmation] = useState<any>(null);
+  // const [confirmation, setConfirmation] = useState<any>(null);
 
   // ⭐ GOOGLE LOGIN INIT
   useEffect(() => {
@@ -66,8 +66,8 @@ const Navbar: React.FC = () => {
         size: "invisible",
       });
 
-      const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      setConfirmation(result);
+      // const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      // setConfirmation(result);
       setOtpStage("otp");
     } catch (error) {
       console.log(error);
