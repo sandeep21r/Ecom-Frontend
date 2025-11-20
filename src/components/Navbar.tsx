@@ -9,46 +9,54 @@ const Navbar: React.FC = () => {
   const [otpStage, setOtpStage] = useState<"options" | "phone" | "otp">("options");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  // const [confirmation, setConfirmation] = useState<any>(null);
 
-  // ⭐ GOOGLE LOGIN INIT
+  // ⭐ LOAD GOOGLE SDK + REGISTER CALLBACK
   useEffect(() => {
-    if (!window.google) return;
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
 
-    window.google.accounts.id.initialize({
-      client_id: "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
-      callback: handleGoogleResponse,
-    });
+    script.onload = () => {
+      console.log("Google SDK Loaded");
+
+      window.google?.accounts.id.initialize({
+        client_id: "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
+        callback: handleGoogleResponse,
+      });
+    };
+
+    document.body.appendChild(script);
   }, []);
 
-  // ⭐ RENDER GOOGLE BUTTON WHEN POPUP OPENS
+  // ⭐ ALWAYS RENDER BUTTON WHEN LOGIN POPUP OPENS
   useEffect(() => {
-    if (showLogin && otpStage === "options" && window.google) {
-      const interval = setInterval(() => {
-        const btn = document.getElementById("gsi-button");
-        if (btn && btn.childElementCount === 0) {
+    if (showLogin && window.google) {
+      setTimeout(() => {
+        const btn = document.getElementById("googleBtn");
+
+        if (btn) {
+          btn.innerHTML = ""; // Clear old renders
+
           window.google.accounts.id.renderButton(btn, {
             theme: "outline",
             size: "large",
             width: "100%",
             text: "continue_with",
           });
-          clearInterval(interval);
         }
       }, 50);
-
-      return () => clearInterval(interval);
     }
-  }, [showLogin, otpStage]);
+  }, [showLogin]);
 
   // ⭐ GOOGLE CALLBACK
-  const handleGoogleResponse = (response: any) => {
-    console.log("Google ID Token:", response.credential);
-    alert("Google Login Success!");
+  const handleGoogleResponse = (res: any) => {
+    console.log("Google Token:", res.credential);
+    alert("Google Login Success");
     setShowLogin(false);
   };
 
-  // ⭐ HAMBURGER TOGGLE
+  // ⭐ HAMBURGER
   const toggleMenu = () => {
     setIsOpen((prev) => {
       const newState = !prev;
@@ -66,11 +74,8 @@ const Navbar: React.FC = () => {
         size: "invisible",
       });
 
-      // const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      // setConfirmation(result);
-      setOtpStage("otp");
+      setOtpStage("otp"); // backend comes later
     } catch (error) {
-      console.log(error);
       alert("Failed to send OTP");
     }
   };
@@ -78,18 +83,12 @@ const Navbar: React.FC = () => {
   // ⭐ VERIFY OTP
   const verifyOtp = async () => {
     if (!otp) return alert("Enter OTP");
-    try {
-      // const data = await confirmation.confirm(otp);
 
-      alert("OTP Verified!");
-      setShowLogin(false);
-      setOtp("");
-      setPhone("");
-      setOtpStage("options");
-    } catch (error) {
-      console.log(error);
-      alert("Invalid OTP");
-    }
+    alert("OTP Verified (frontend only)");
+    setShowLogin(false);
+    setOtp("");
+    setPhone("");
+    setOtpStage("options");
   };
 
   return (
@@ -101,160 +100,118 @@ const Navbar: React.FC = () => {
 
           <ul className="hidden md:flex gap-6 text-sm font-medium">
             {navLinks.map((link) => (
-              <li key={link} className="cursor-pointer hover:text-gray-600 transition-colors">
-                {link}
-              </li>
+              <li key={link} className="cursor-pointer hover:text-gray-600">{link}</li>
             ))}
             <li>
-              <button className="text-sm font-medium hover:text-gray-600" onClick={() => setShowLogin(true)}>
+              <button className="hover:text-gray-600" onClick={() => setShowLogin(true)}>
                 Login / Signup
               </button>
             </li>
           </ul>
 
-          {/* MOBILE HAMBURGER */}
+          {/* HAMBURGER */}
           <button
-            className="relative flex h-10 w-10 flex-col items-center justify-center gap-1 md:hidden"
+            className="md:hidden flex flex-col gap-1 h-10 w-10 justify-center items-center"
             onClick={toggleMenu}
           >
-            <span className={`h-0.5 w-6 bg-black transition-transform duration-300 ${isOpen ? "translate-y-1.5 rotate-45" : ""}`} />
-            <span className={`h-0.5 w-6 bg-black transition-all duration-300 ${isOpen ? "opacity-0" : "opacity-100"}`} />
-            <span className={`h-0.5 w-6 bg-black transition-transform duration-300 ${isOpen ? "-translate-y-1.5 -rotate-45" : ""}`} />
+            <span className={`h-0.5 w-6 bg-black ${isOpen ? "rotate-45 translate-y-1.5" : ""}`} />
+            <span className={`h-0.5 w-6 bg-black ${isOpen ? "opacity-0" : ""}`} />
+            <span className={`h-0.5 w-6 bg-black ${isOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
           </button>
         </nav>
       </header>
 
-      {/* MOBILE SIDE MENU */}
+      {/* MOBILE MENU */}
       <div
-        className={`
-          fixed inset-0 z-50 bg-[#F7F3E8] md:hidden
-          transform transition-transform duration-300 ease-out
-          h-screen w-full overflow-y-hidden
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
-        `}
+        className={`fixed inset-0 bg-[#F7F3E8] z-50 md:hidden transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
       >
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="text-xl font-semibold tracking-wide">Clothify</div>
-
-          <button onClick={toggleMenu} className="relative flex h-10 w-10 flex-col items-center justify-center gap-1">
-            <span className="h-0.5 w-6 bg-black translate-y-1.5 rotate-45" />
-            <span className="h-0.5 w-6 bg-black opacity-0" />
-            <span className="h-0.5 w-6 bg-black -translate-y-1.5 -rotate-45" />
-          </button>
+        <div className="flex justify-between px-6 py-4">
+          <div className="text-xl font-semibold">Clothify</div>
+          <button onClick={toggleMenu}>✖</button>
         </div>
 
         <button
-          onClick={() => {
-            toggleMenu();
-            setShowLogin(true);
-          }}
-          className="w-full border-b border-black/20 pb-4 text-left pl-5 text-xl font-medium"
+          onClick={() => { toggleMenu(); setShowLogin(true); }}
+          className="w-full border-b border-black/20 pb-4 pl-5 text-xl"
         >
           Login / Signup
         </button>
 
-        <div className="mt-10 flex flex-col gap-8 text-xl font-medium w-full px-2">
+        <div className="mt-10 flex flex-col gap-8 px-2">
           {navLinks.map((link) => (
-            <button key={link} className="w-full border-b border-black/20 pb-4" onClick={toggleMenu}>
-              <div className="pl-5 text-left">{link}</div>
+            <button key={link} className="border-b border-black/20 pb-4" onClick={toggleMenu}>
+              <div className="pl-5">{link}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* LOGIN POPUP */}
-      {/* LOGIN POPUP */}
-{showLogin && (
-  <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
-    <div className="bg-white w-[90%] max-w-sm rounded-lg p-6 shadow-lg relative">
+      {/* LOGIN MODAL */}
+      {showLogin && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex justify-center items-center">
+          <div className="bg-white w-[90%] max-w-sm rounded-lg p-6 relative">
 
-      {/* CLOSE BUTTON */}
-      <button
-        className="absolute right-3 top-3 text-xl"
-        onClick={() => {
-          setShowLogin(false);
-          setOtpStage("options");
-          setPhone("");
-          setOtp("");
-        }}
-      >
-        ✖
-      </button>
+            <button className="absolute right-3 top-3 text-xl" onClick={() => setShowLogin(false)}>
+              ✖
+            </button>
 
-      {/* SCREEN 1: OTP + GOOGLE BELOW */}
-      {otpStage === "options" && (
-        <>
-          <h2 className="text-xl font-semibold mb-6 text-center">Login / Signup</h2>
+            {/* ⭐ GOOGLE BUTTON (ALWAYS HERE) */}
+            <div className="flex justify-center mb-6">
+              <div id="googleBtn"></div>
+            </div>
 
-          {/* PHONE LOGIN FIRST */}
-          <button
-            className="w-full border border-gray-300 rounded-md py-2 text-sm font-medium hover:bg-gray-50 mb-5"
-            onClick={() => setOtpStage("phone")}
-          >
-            Continue with Phone (OTP)
-          </button>
+            {/* OPTIONS */}
+            {otpStage === "options" && (
+              <button
+                className="w-full border rounded-md py-2 mb-4"
+                onClick={() => setOtpStage("phone")}
+              >
+                Continue with Phone (OTP)
+              </button>
+            )}
 
-          {/* ⭐ GOOGLE BUTTON (INSIDE CENTER, BELOW OTP) */}
-          <div className="flex justify-center mt-2">
-            <div id="gsi-button"></div>
+            {/* PHONE */}
+            {otpStage === "phone" && (
+              <>
+                <h2 className="text-xl font-semibold mb-4 text-center">Enter Phone Number</h2>
+                <input
+                  type="text"
+                  placeholder="+91 9876543210"
+                  className="border w-full px-3 py-2 rounded-md mb-4"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+
+                <div id="recaptcha-container"></div>
+
+                <button className="bg-black w-full text-white rounded-md py-2" onClick={sendOtp}>
+                  Send OTP
+                </button>
+              </>
+            )}
+
+            {/* OTP */}
+            {otpStage === "otp" && (
+              <>
+                <h2 className="text-xl font-semibold mb-4 text-center">Enter OTP</h2>
+                <input
+                  type="text"
+                  placeholder="123456"
+                  className="border w-full px-3 py-2 rounded-md mb-4 text-center"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
+
+                <button className="bg-black w-full text-white rounded-md py-2" onClick={verifyOtp}>
+                  Verify OTP
+                </button>
+              </>
+            )}
           </div>
-        </>
+        </div>
       )}
-
-      {/* SCREEN 2: ENTER PHONE */}
-      {otpStage === "phone" && (
-        <>
-          <h2 className="text-xl font-semibold mb-4 text-center">Enter Phone Number</h2>
-
-          <input
-            type="text"
-            placeholder="+91 9876543210"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full border px-3 py-2 rounded-md mb-4"
-          />
-
-          <div id="recaptcha-container"></div>
-
-          <button className="w-full bg-black text-white rounded-md py-2" onClick={sendOtp}>
-            Send OTP
-          </button>
-
-          {/* ⭐ GOOGLE BUTTON BELOW PHONE INPUT */}
-          <div className="flex justify-center mt-5">
-            <div id="gsi-button"></div>
-          </div>
-        </>
-      )}
-
-      {/* SCREEN 3: ENTER OTP */}
-      {otpStage === "otp" && (
-        <>
-          <h2 className="text-xl font-semibold mb-4 text-center">Enter OTP</h2>
-
-          <input
-            type="text"
-            placeholder="123456"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            className="w-full border px-3 py-2 rounded-md mb-4 text-center tracking-widest"
-          />
-
-          <button className="w-full bg-black text-white rounded-md py-2" onClick={verifyOtp}>
-            Verify OTP
-          </button>
-
-          {/* ⭐ GOOGLE BUTTON BELOW OTP also */}
-          <div className="flex justify-center mt-5">
-            <div id="gsi-button"></div>
-          </div>
-        </>
-      )}
-
-    </div>
-  </div>
-)}
-
     </>
   );
 };
