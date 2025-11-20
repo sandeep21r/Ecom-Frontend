@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 const navLinks = ["Shop", "About", "Contact"];
 
 const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // hamburger
   const [showLogin, setShowLogin] = useState(false);
   const [otpStage, setOtpStage] = useState<"options" | "phone" | "otp">("options");
   const [phone, setPhone] = useState("");
@@ -21,7 +21,8 @@ const Navbar: React.FC = () => {
     script.onload = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
+          client_id:
+            "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
           callback: handleGoogleResponse,
         });
         setGoogleLoaded(true);
@@ -31,8 +32,7 @@ const Navbar: React.FC = () => {
     document.body.appendChild(script);
   }, []);
 
-  // ⭐ SHOW GOOGLE BUTTON ONLY WHEN:
-  // modal open + googleLoaded + otpStage = options
+  // ⭐ RENDER GOOGLE BUTTON when: login open + options screen + SDK loaded
   useEffect(() => {
     if (!showLogin) return;
     if (!googleLoaded) return;
@@ -40,16 +40,15 @@ const Navbar: React.FC = () => {
 
     const interval = setInterval(() => {
       const btn = document.getElementById("googleContainer");
-      if (btn) {
-        btn.innerHTML = ""; // wipe old button
 
+      if (btn) {
+        btn.innerHTML = ""; // avoid duplicates
         window.google.accounts.id.renderButton(btn, {
           theme: "outline",
           size: "large",
           width: "250px",
           text: "continue_with",
         });
-
         clearInterval(interval);
       }
     }, 50);
@@ -72,7 +71,7 @@ const Navbar: React.FC = () => {
     setOtp("");
   };
 
-  // ⭐ MENU TOGGLE
+  // ⭐ HAMBURGER TOGGLE
   const toggleMenu = () => {
     const next = !isOpen;
     setIsOpen(next);
@@ -82,7 +81,6 @@ const Navbar: React.FC = () => {
   // ⭐ SEND OTP
   const sendOtp = () => {
     if (!phone) return alert("Enter phone number");
-
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
       size: "invisible",
     });
@@ -100,43 +98,111 @@ const Navbar: React.FC = () => {
   return (
     <>
       {/* NAVBAR */}
-      <header className="w-full bg-[#F7F3E8] md:fixed md:z-40">
+      <header className="w-full bg-[#F7F3E8] md:fixed md:z-40 top-0 left-0 right-0">
         <nav className="flex justify-between items-center px-6 py-4">
           <div className="text-xl font-semibold">Clothify</div>
 
-          <ul className="hidden md:flex gap-6 text-sm">
+          {/* DESKTOP MENU */}
+          <ul className="hidden md:flex gap-6 text-sm font-medium">
             {navLinks.map((l) => (
               <li key={l} className="cursor-pointer hover:text-gray-600">
                 {l}
               </li>
             ))}
             <li>
-              <button onClick={() => setShowLogin(true)} className="hover:text-gray-600">
+              <button
+                className="hover:text-gray-600"
+                onClick={() => setShowLogin(true)}
+              >
                 Login / Signup
               </button>
             </li>
           </ul>
 
-          {/* MOBILE BURGER */}
-          <button className="md:hidden flex flex-col gap-1 h-10 w-10" onClick={toggleMenu}>
-            <span className="h-0.5 w-6 bg-black" />
-            <span className="h-0.5 w-6 bg-black" />
-            <span className="h-0.5 w-6 bg-black" />
+          {/* ⭐ MOBILE HAMBURGER */}
+          <button
+            onClick={toggleMenu}
+            className="md:hidden relative flex h-10 w-10 flex-col items-center justify-center gap-1"
+          >
+            <span
+              className={`h-0.5 w-6 bg-black transition duration-300 ${
+                isOpen ? "translate-y-1.5 rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`h-0.5 w-6 bg-black transition duration-300 ${
+                isOpen ? "opacity-0" : "opacity-100"
+              }`}
+            />
+            <span
+              className={`h-0.5 w-6 bg-black transition duration-300 ${
+                isOpen ? "-translate-y-1.5 -rotate-45" : ""
+              }`}
+            />
           </button>
         </nav>
       </header>
 
-      {/* LOGIN POPUP */}
+      {/* ⭐ MOBILE SLIDE MENU */}
+      <div
+        className={`
+          fixed inset-0 bg-[#F7F3E8] md:hidden z-50
+          transform transition-transform duration-300 ease-out
+          h-screen w-full
+          ${isOpen ? "translate-x-0" : "translate-x-full"}
+        `}
+      >
+        {/* TOP BAR */}
+        <div className="flex justify-between items-center px-6 py-4">
+          <div className="text-xl font-semibold">Clothify</div>
+
+          {/* X BUTTON */}
+          <button
+            onClick={toggleMenu}
+            className="relative flex h-10 w-10 flex-col items-center justify-center gap-1"
+          >
+            <span className="h-0.5 w-6 bg-black translate-y-1.5 rotate-45" />
+            <span className="h-0.5 w-6 bg-black opacity-0" />
+            <span className="h-0.5 w-6 bg-black -translate-y-1.5 -rotate-45" />
+          </button>
+        </div>
+
+        {/* LOGIN BUTTON */}
+        <button
+          onClick={() => {
+            toggleMenu();
+            setShowLogin(true);
+          }}
+          className="w-full border-b border-black/20 pb-4 pl-5 text-left text-xl"
+        >
+          Login / Signup
+        </button>
+
+        {/* MENU LINKS */}
+        <div className="mt-10 flex flex-col gap-8 text-xl px-2">
+          {navLinks.map((l) => (
+            <button
+              key={l}
+              onClick={toggleMenu}
+              className="w-full border-b border-black/20 pb-4 text-left pl-5"
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ⭐ LOGIN POPUP */}
       {showLogin && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-[999]">
+        <div className="fixed inset-0 bg-black/40 z-[60] flex justify-center items-center">
           <div className="bg-white w-[90%] max-w-sm rounded-lg p-6 relative">
 
-            {/* CLOSE */}
+            {/* CLOSE BUTTON */}
             <button className="absolute right-3 top-3 text-xl" onClick={closeModal}>
               ✖
             </button>
 
-            {/* ⭐ GOOGLE BUTTON RESERVED SPACE (NO SHAKING) */}
+            {/* GOOGLE BUTTON AREA (no shaking) */}
             <div className="flex justify-center mb-6">
               <div
                 id="googleContainer"
@@ -148,51 +214,54 @@ const Navbar: React.FC = () => {
               ></div>
             </div>
 
-            {/* OPTIONS */}
+            {/* OTP OPTION */}
             {otpStage === "options" && (
-              <>
-                <button
-                  className="w-full border rounded-md py-2 hover:bg-gray-50"
-                  onClick={() => setOtpStage("phone")}
-                >
-                  Continue with Phone (OTP)
-                </button>
-              </>
+              <button
+                onClick={() => setOtpStage("phone")}
+                className="w-full border rounded-md py-2 hover:bg-gray-50"
+              >
+                Continue with Phone (OTP)
+              </button>
             )}
 
-            {/* PHONE */}
+            {/* PHONE INPUT */}
             {otpStage === "phone" && (
               <>
                 <h2 className="text-lg font-semibold mb-4 text-center">Enter Phone Number</h2>
                 <input
-                  className="border w-full px-3 py-2 rounded-md mb-4"
-                  placeholder="+91 9876543210"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  className="w-full border rounded-md px-3 py-2 mb-4"
+                  placeholder="+91 9876543210"
                 />
                 <div id="recaptcha-container"></div>
-                <button className="w-full bg-black text-white py-2 rounded-md" onClick={sendOtp}>
+                <button
+                  onClick={sendOtp}
+                  className="w-full bg-black text-white rounded-md py-2"
+                >
                   Send OTP
                 </button>
               </>
             )}
 
-            {/* OTP */}
+            {/* OTP INPUT */}
             {otpStage === "otp" && (
               <>
                 <h2 className="text-lg font-semibold mb-4 text-center">Enter OTP</h2>
                 <input
-                  className="border w-full px-3 py-2 rounded-md mb-4 text-center"
-                  placeholder="123456"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
+                  className="w-full border rounded-md px-3 py-2 mb-4 text-center"
+                  placeholder="123456"
                 />
-                <button className="w-full bg-black text-white py-2 rounded-md" onClick={verifyOtp}>
+                <button
+                  onClick={verifyOtp}
+                  className="w-full bg-black text-white rounded-md py-2"
+                >
                   Verify OTP
                 </button>
               </>
             )}
-
           </div>
         </div>
       )}
