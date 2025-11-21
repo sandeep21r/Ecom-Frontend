@@ -38,6 +38,7 @@ const Navbar: React.FC = () => {
           client_id:
             "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
           callback: handleGoogleResponse,
+            auto_select: false
         });
         setGoogleLoaded(true);
       }
