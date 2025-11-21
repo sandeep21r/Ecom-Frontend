@@ -1,23 +1,34 @@
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import FooterBottom from "./components/FooterBottom";
+import HomePage from "./components/HomePage";
+import { Routes, Route } from "react-router-dom";
+import Contact from "./components/Contact";
+import ScrollToTop from "./components/ScrollToTop";
+
 
 function App() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+       <ScrollToTop />  
+      <div
+        id="recaptcha-container"
+        style={{
+          opacity: 0,
+          height: 0,
+          overflow: "hidden",
+          position: "absolute"
+        }}
+      ></div>
 
-      <main className="w-full px-2 pt-4 md:pt-24">
-        <h1 className="mb-6 text-3xl font-semibold">Clothing Store Homepage</h1>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/contact" element={<Contact />} />
+      </Routes>
+      <Footer />
+      <FooterBottom />
 
-        <p className="mb-4 text-gray-700">
-          No left/right space now.  edge-to-edge.
-        </p>
-
-        <div className="space-y-4">
-          {Array.from({ length: 25 }).map((_, i) => (
-            <div key={i} className="h-16 rounded-md bg-white border border-gray-200 shadow-sm" />
-          ))}
-        </div>
-      </main>
     </div>
   );
 }

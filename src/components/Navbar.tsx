@@ -1,11 +1,13 @@
 import { auth } from "./firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { useEffect, useState } from "react";
+import { loginWithGoogle, loginWithOtp } from "../api/auth";
+import { useNavigate, useLocation } from "react-router-dom";
 
-const navLinks = ["Shop", "About", "Contact"];
+const navLinks = ["Shop", "Category", "About", "Contact"];
 
 const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false); // hamburger
+  const [isOpen, setIsOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [otpStage, setOtpStage] = useState<"options" | "phone" | "otp">("options");
   const [phone, setPhone] = useState("");
@@ -13,16 +15,17 @@ const Navbar: React.FC = () => {
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const [loadingOtp, setLoadingOtp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [fade, setFade] = useState(false);
 
-  // 🔹 On mount → check if user already logged in (JWT in localStorage)
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    if (token) {
-      setIsAuthenticated(true);
-    }
+    if (token) setIsAuthenticated(true);
   }, []);
 
-  // ⭐ LOAD GOOGLE SDK ONCE
+  // ---------------- GOOGLE SCRIPT ----------------
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
@@ -43,17 +46,14 @@ const Navbar: React.FC = () => {
     document.body.appendChild(script);
   }, []);
 
-  // ⭐ RENDER GOOGLE BUTTON when: login open + options screen + SDK loaded
+  // ---------------- GOOGLE BUTTON RENDER ----------------
   useEffect(() => {
-    if (!showLogin) return;
-    if (!googleLoaded) return;
-    if (otpStage !== "options") return;
+    if (!showLogin || !googleLoaded || otpStage !== "options") return;
 
     const interval = setInterval(() => {
       const btn = document.getElementById("googleContainer");
-
       if (btn) {
-        btn.innerHTML = ""; // avoid duplicates
+        btn.innerHTML = "";
         window.google.accounts.id.renderButton(btn, {
           theme: "outline",
           size: "large",
@@ -67,38 +67,24 @@ const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, [showLogin, otpStage, googleLoaded]);
 
-  // 🔹 Dummy backend call for OTP login
-  const mockLoginWithOtp = async (phone: string) => {
-    // simulate API delay
-    await new Promise((res) => setTimeout(res, 500));
-
-    // dummy JWT
-    const fakeJwt = `dummy-jwt-for-${phone}`;
-    localStorage.setItem("authToken", fakeJwt);
+  const doOtpLogin = async (phone: string) => {
+    const res = await loginWithOtp(phone);
+    localStorage.setItem("authToken", res.token);
     setIsAuthenticated(true);
   };
 
-  // 🔹 Dummy backend call for Google login
-  const mockLoginWithGoogle = async (idToken: string) => {
-    await new Promise((res) => setTimeout(res, 500));
-
-    const fakeJwt = `dummy-jwt-google-${idToken.substring(0, 10)}`;
-    localStorage.setItem("authToken", fakeJwt);
+  const doGoogleLogin = async (idToken: string) => {
+    const res = await loginWithGoogle(idToken);
+    localStorage.setItem("authToken", res.token);
     setIsAuthenticated(true);
   };
 
-  // ⭐ GOOGLE CALLBACK
   const handleGoogleResponse = async (res: any) => {
-    console.log("Google Token:", res.credential);
-
-    // 👉 send to backend later. For now, mock:
-    await mockLoginWithGoogle(res.credential);
-
+    await doGoogleLogin(res.credential);
     alert("Google Login Success!");
     closeModal();
   };
 
-  // ⭐ CLOSE MODAL CLEANLY
   const closeModal = () => {
     setShowLogin(false);
     setOtpStage("options");
@@ -106,202 +92,190 @@ const Navbar: React.FC = () => {
     setOtp("");
   };
 
-  // ⭐ HAMBURGER TOGGLE
   const toggleMenu = () => {
-    const next = !isOpen;
-    setIsOpen(next);
-    document.body.style.overflow = next ? "hidden" : "auto";
+    setIsOpen(!isOpen);
+    document.body.style.overflow = !isOpen ? "hidden" : "auto";
   };
 
-  // ⭐ LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     setIsAuthenticated(false);
   };
 
-  // ⭐ SEND OTP (Invisible-ish reCAPTCHA + loader)
+  // ---------------- OTP SEND ----------------
   const sendOtp = async () => {
     if (!phone) return alert("Enter phone number");
 
     try {
       setLoadingOtp(true);
-      alert("Sending OTP...");
 
-      // Create invisible reCAPTCHA only once
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container",
-          {
-            size: "invisible", // invisible widget
-            callback: () => console.log("reCAPTCHA solved (auto)"),
-          }
-        );
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible",
+        });
+        await window.recaptchaVerifier.render();
       }
 
-      const appVerifier = window.recaptchaVerifier;
-
-      const result = await signInWithPhoneNumber(auth, phone, appVerifier);
-
+      const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
       window.confirmationResult = result;
-
-      alert("OTP Sent Successfully!");
       setOtpStage("otp");
     } catch (err) {
-      console.error("OTP ERROR:", err);
       alert("Failed to send OTP");
     } finally {
       setLoadingOtp(false);
     }
   };
 
-  // ⭐ VERIFY OTP
+  // ---------------- OTP VERIFY ----------------
   const verifyOtp = async () => {
     if (!otp) return alert("Enter OTP");
 
     try {
-      const result = await window.confirmationResult.confirm(otp);
-      console.log("Firebase User:", result.user);
-
-      // 👉 Call backend (mocked):
-      await mockLoginWithOtp(phone);
-
-      alert("OTP Verified Successfully!");
+      await window.confirmationResult.confirm(otp);
+      await doOtpLogin(phone);
       closeModal();
-    } catch (error) {
-      console.log(error);
+    } catch {
       alert("Invalid OTP");
     }
   };
 
+  // ---------------- ABOUT SCROLL ----------------
+  const smoothAboutScroll = () => {
+    document.body.style.overflow = "auto";
+    document.getElementById("about-section")?.scrollIntoView({
+      behavior: "smooth",
+    });
+  };
+
+  // ---------------- FIXED NAV CLICK HANDLER ----------------
+  const handleNavClick = async (label: string) => {
+    // ALWAYS close hamburger when clicking an option
+    setIsOpen(false);
+    document.body.style.overflow = "auto";
+
+    if (label === "About") {
+      if (location.pathname !== "/") {
+        navigate("/");
+        setTimeout(smoothAboutScroll, 350);
+      } else {
+        smoothAboutScroll();
+      }
+      return;
+    }
+
+    if (label === "Contact") {
+      setFade(true);
+      setTimeout(() => {
+        navigate("/contact");
+        setFade(false);
+      }, 300);
+      return;
+    }
+
+    if (label === "Shop") alert("Shop coming soon!");
+    if (label === "Category") alert("Category coming soon!");
+  };
+
   return (
     <>
-      {/* NAVBAR */}
-      <header className="w-full bg-[#F7F3E8] md:fixed md:z-40 top-0 left-0 right-0">
-        <nav className="flex justify-between items-center px-6 py-4">
-          <div className="text-xl font-semibold">Clothify</div>
+      {/* PAGE FADE WRAPPER */}
+      <div className={`${fade ? "opacity-0 transition-opacity duration-300" : "opacity-100"}`}>
 
-          {/* DESKTOP MENU */}
-          <ul className="hidden md:flex gap-6 text-sm font-medium">
-            {navLinks.map((l) => (
-              <li key={l} className="cursor-pointer hover:text-gray-600">
-                {l}
-              </li>
-            ))}
-            <li>
-              {!isAuthenticated ? (
-                <button
-                  className="hover:text-gray-600"
-                  onClick={() => setShowLogin(true)}
+        <header className="w-full bg-white md:fixed md:z-40 top-0 left-0 right-0">
+          <nav className="flex justify-between items-center px-6 py-10">
+
+            <div className="text-3xl font-semibold leading-none">Clothify</div>
+
+            <ul className="hidden md:flex justify-center gap-10 text-2xl font-medium">
+              {navLinks.map((l) => (
+                <li
+                  key={l}
+                  className="cursor-pointer hover:text-gray-400"
+                  onClick={() => handleNavClick(l)}
                 >
-                  Login / Signup
+                  {l}
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden md:flex justify-end">
+              {!isAuthenticated ? (
+                <button className="hover:text-gray-400 text-xl" onClick={() => setShowLogin(true)}>
+                  Log In
                 </button>
               ) : (
-                <button
-                  className="hover:text-gray-600"
-                  onClick={handleLogout}
-                >
+                <button className="hover:text-gray-400 text-xl" onClick={handleLogout}>
                   Logout
                 </button>
               )}
-            </li>
-          </ul>
+            </div>
 
-          {/* ⭐ MOBILE HAMBURGER */}
-          <button
-            onClick={toggleMenu}
-            className="md:hidden relative flex h-10 w-10 flex-col items-center justify-center gap-1"
-          >
-            <span
-              className={`h-0.5 w-6 bg-black transition duration-300 ${
-                isOpen ? "translate-y-1.5 rotate-45" : ""
-              }`}
-            />
-            <span
-              className={`h-0.5 w-6 bg-black transition duration-300 ${
-                isOpen ? "opacity-0" : "opacity-100"
-              }`}
-            />
-            <span
-              className={`h-0.5 w-6 bg-black transition duration-300 ${
-                isOpen ? "-translate-y-1.5 -rotate-45" : ""
-              }`}
-            />
-          </button>
-        </nav>
-      </header>
-
-      {/* ⭐ MOBILE SLIDE MENU */}
-      <div
-        className={`
-          fixed inset-0 bg-[#F7F3E8] md:hidden z-50
-          transform transition-transform duration-300 ease-out
-          h-screen w-full
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
-        `}
-      >
-        {/* TOP BAR */}
-        <div className="flex justify-between items-center px-6 py-4">
-          <div className="text-xl font-semibold">Clothify</div>
-
-          {/* X BUTTON */}
-          <button
-            onClick={toggleMenu}
-            className="relative flex h-10 w-10 flex-col items-center justify-center gap-1"
-          >
-            <span className="h-0.5 w-6 bg-black translate-y-1.5 rotate-45" />
-            <span className="h-0.5 w-6 bg-black opacity-0" />
-            <span className="h-0.5 w-6 bg-black -translate-y-1.5 -rotate-45" />
-          </button>
-        </div>
-
-        {/* LOGIN / LOGOUT BUTTON */}
-        <button
-          onClick={() => {
-            if (isAuthenticated) {
-              handleLogout();
-              toggleMenu();
-            } else {
-              toggleMenu();
-              setShowLogin(true);
-            }
-          }}
-          className="w-full border-b border-black/20 pb-4 pl-5 text-left text-xl"
-        >
-          {isAuthenticated ? "Logout" : "Login / Signup"}
-        </button>
-
-        {/* MENU LINKS */}
-        <div className="mt-10 flex flex-col gap-8 text-xl px-2">
-          {navLinks.map((l) => (
+            {/* HAMBURGER */}
             <button
-              key={l}
               onClick={toggleMenu}
-              className="w-full border-b border-black/20 pb-4 text-left pl-5"
+              className="md:hidden relative flex h-10 w-10 flex-col items-center justify-center gap-1"
             >
-              {l}
+              <span className={`h-0.5 w-6 bg-black transition ${isOpen ? "translate-y-1.5 rotate-45" : ""}`} />
+              <span className={`h-0.5 w-6 bg-black transition ${isOpen ? "opacity-0" : "opacity-100"}`} />
+              <span className={`h-0.5 w-6 bg-black transition ${isOpen ? "-translate-y-1.5 -rotate-45" : ""}`} />
             </button>
-          ))}
-        </div>
+
+          </nav>
+        </header>
+
       </div>
 
-      {/* ⭐ LOGIN POPUP */}
+      {/* ---------------- MOBILE MENU ---------------- */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-white z-50 md:hidden transition-transform">
+          <div className="flex justify-between items-center px-6 py-4">
+            <div className="text-2xl font-semibold">Clothify</div>
+
+            <button
+              onClick={toggleMenu}
+              className="relative flex h-10 w-10 flex-col items-center justify-center gap-1"
+            >
+              <span className="h-0.5 w-6 bg-black translate-y-1.5 rotate-45" />
+              <span className="h-0.5 w-6 bg-black opacity-0" />
+              <span className="h-0.5 w-6 bg-black -translate-y-1.5 -rotate-45" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              if (isAuthenticated) handleLogout();
+              else setShowLogin(true);
+              toggleMenu();
+            }}
+            className="w-full border-b border-black/20 pb-4 pl-7 text-left text-xl"
+          >
+            {isAuthenticated ? "Logout" : "Log In"}
+          </button>
+
+          <div className="mt-10 flex flex-col gap-8 text-xl px-2">
+            {navLinks.map((l) => (
+              <button
+                key={l}
+                onClick={() => handleNavClick(l)}
+                className="w-full border-b border-black/20 pb-4 text-left pl-5"
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* LOGIN POPUP */}
       {showLogin && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex justify-center items-center">
           <div className="bg-white w-[90%] max-w-sm rounded-lg p-6 relative">
-            {/* CLOSE BUTTON */}
-            <button className="absolute right-3 top-3 text-xl" onClick={closeModal}>
-              ✖
-            </button>
+            <button className="absolute right-3 top-3 text-xl" onClick={closeModal}>✖</button>
 
-            {/* OPTIONS SCREEN */}
             {otpStage === "options" && (
               <>
-                <h2 className="text-xl font-semibold mb-4 text-center">
-                  Login / Signup
-                </h2>
+                <h2 className="text-3xl font-semibold mb-4 text-center">Log In</h2>
 
-                {/* OTP OPTION FIRST */}
                 <button
                   onClick={() => setOtpStage("phone")}
                   className="w-full border rounded-md py-2 hover:bg-gray-50 mb-4"
@@ -309,36 +283,21 @@ const Navbar: React.FC = () => {
                   Continue with Phone (OTP)
                 </button>
 
-                {/* GOOGLE BUTTON BELOW OTP */}
                 <div className="flex justify-center">
-                  <div
-                    id="googleContainer"
-                    style={{
-                      height: "45px",
-                      width: "250px",
-                    }}
-                  ></div>
+                  <div id="googleContainer" style={{ height: "45px", width: "250px" }}></div>
                 </div>
               </>
             )}
 
-            {/* PHONE INPUT */}
             {otpStage === "phone" && (
               <>
-                <h2 className="text-lg font-semibold mb-4 text-center">
-                  Enter Phone Number
-                </h2>
+                <h2 className="text-lg font-semibold mb-4 text-center">Enter Phone Number</h2>
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full border rounded-md px-3 py-2 mb-4"
                   placeholder="+91 9876543210"
                 />
-                {/* recaptcha container (hidden) */}
-                <div
-                  id="recaptcha-container"
-                  className="opacity-0 h-0 overflow-hidden"
-                ></div>
                 <button
                   onClick={sendOtp}
                   disabled={loadingOtp}
@@ -349,12 +308,9 @@ const Navbar: React.FC = () => {
               </>
             )}
 
-            {/* OTP INPUT */}
             {otpStage === "otp" && (
               <>
-                <h2 className="text-lg font-semibold mb-4 text-center">
-                  Enter OTP
-                </h2>
+                <h2 className="text-lg font-semibold mb-4 text-center">Enter OTP</h2>
                 <input
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
