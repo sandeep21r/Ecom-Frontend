@@ -6,6 +6,7 @@ import { Routes, Route } from "react-router-dom";
 import Contact from "./components/Contact";
 import ScrollToTop from "./components/ScrollToTop";
 import Admin from "./components/Admin";
+import AdminUsers from "./components/AdminUsers";
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin" element={<Admin />} /> {/* ⭐ NEW ROUTE */}
+        <Route path="/admin/users" element={<AdminUsers />} />
 
       </Routes>
       <Footer />
