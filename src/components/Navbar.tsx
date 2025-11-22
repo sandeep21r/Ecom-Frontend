@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { loginWithGoogle, loginWithOtp } from "../api/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const navLinks = ["Shop", "Category", "About", "Contact"];
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,13 +17,23 @@ const Navbar: React.FC = () => {
   const [fade, setFade] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const defaultLinks = ["Shop", "Category", "About", "Contact"];
+  const adminLinks = userRole === "admin" ? ["Admin"] : [];
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
+  const navLinks = [...defaultLinks, ...adminLinks];
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    if (token) setIsAuthenticated(true);
+    const role = localStorage.getItem("userRole");
+
+    if (token) {
+      setIsAuthenticated(true)
+      setUserRole(role);
+    };
   }, []);
 
   // ---------------- GOOGLE SCRIPT ----------------
@@ -73,13 +82,25 @@ const Navbar: React.FC = () => {
   const doOtpLogin = async (phone: string) => {
     const res = await loginWithOtp(phone);
     localStorage.setItem("authToken", res.token);
+    localStorage.setItem("userRole", res.user.role);
+  setUserRole(res.user.role); 
     setIsAuthenticated(true);
+      setJustLoggedIn(true);  // ⭐️ Prevent auto nav jump
+      window.location.reload();
+
+
   };
 
   const doGoogleLogin = async (idToken: string) => {
     const res = await loginWithGoogle(idToken);
     localStorage.setItem("authToken", res.token);
+    localStorage.setItem("userRole", res.user.role);
+    setUserRole(res.user.role); 
     setIsAuthenticated(true);
+      setJustLoggedIn(true);  // ⭐️ Prevent auto nav jump
+      window.location.reload();
+
+
   };
 
   const handleGoogleResponse = async (res: any) => {
@@ -109,8 +130,13 @@ const Navbar: React.FC = () => {
   };
 
   const handleLogout = () => {
+
     localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");  
     setIsAuthenticated(false);
+    setUserRole(null);    
+    navigate("/");
+            
   };
 
   // ---------------- OTP SEND ----------------
@@ -167,6 +193,10 @@ const Navbar: React.FC = () => {
 
   // ---------------- FIXED NAV CLICK HANDLER ----------------
   const handleNavClick = async (label: string) => {
+     if (justLoggedIn) {
+    setJustLoggedIn(false);
+    return;
+  }
     // ALWAYS close hamburger when clicking an option
     setIsOpen(false);
     document.body.style.overflow = "auto";
@@ -192,6 +222,11 @@ const Navbar: React.FC = () => {
 
     if (label === "Shop") alert("Shop coming soon!");
     if (label === "Category") alert("Category coming soon!");
+
+    if (label === "Admin") {
+      navigate("/admin");
+      return;
+    }
   };
 
   return (

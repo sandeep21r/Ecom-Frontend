@@ -1,12 +1,14 @@
     import axios from "axios";
 
     const API = axios.create({
-      baseURL: "https://ecom-backend-9qo4.onrender.com/api",
+      baseURL: "http://localhost:5000/api",
     });
 
 
     // POST: Google Login
     export const loginWithGoogle = async (idToken: string) => {
+      console.log("ID Token in API Call:", idToken);
+      console.log("API Base URL:", API.defaults.baseURL);
       const res = await API.post("/auth/google", { idToken });
       return res.data; // contains { token, user }
     };
