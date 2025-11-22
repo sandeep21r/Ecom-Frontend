@@ -16,6 +16,8 @@ const Navbar: React.FC = () => {
   const [loadingOtp, setLoadingOtp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [fade, setFade] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,7 +40,7 @@ const Navbar: React.FC = () => {
           client_id:
             "125602396414-8opuvdanvo8eso6fise6smerckth0glh.apps.googleusercontent.com",
           callback: handleGoogleResponse,
-            auto_select: false
+          auto_select: false
         });
         setGoogleLoaded(true);
       }
@@ -81,9 +83,17 @@ const Navbar: React.FC = () => {
   };
 
   const handleGoogleResponse = async (res: any) => {
-    await doGoogleLogin(res.credential);
-    alert("Google Login Success!");
-    closeModal();
+    setGoogleLoading(true); // ⬅️ START LOADING
+
+    try {
+      await doGoogleLogin(res.credential);
+      alert("Google Login Success!");
+      closeModal();
+    } catch (error) {
+      alert("Google login failed");
+    } finally {
+      setGoogleLoading(false); // ⬅️ STOP LOADING
+    }
   };
 
   const closeModal = () => {
@@ -132,13 +142,20 @@ const Navbar: React.FC = () => {
     if (!otp) return alert("Enter OTP");
 
     try {
+      setVerifyingOtp(true); // ⬅️ START LOADING
+
       await window.confirmationResult.confirm(otp);
       await doOtpLogin(phone);
+
+      alert("OTP Verified!");
       closeModal();
     } catch {
       alert("Invalid OTP");
+    } finally {
+      setVerifyingOtp(false); // ⬅️ STOP LOADING
     }
   };
+
 
   // ---------------- ABOUT SCROLL ----------------
   const smoothAboutScroll = () => {
@@ -285,7 +302,16 @@ const Navbar: React.FC = () => {
                 </button>
 
                 <div className="flex justify-center">
-                  <div id="googleContainer" style={{ height: "45px", width: "250px" }}></div>
+                  {googleLoading ? (
+                    <div className="text-center text-gray-600 text-lg py-2">
+                      Please wait...
+                    </div>
+                  ) : (
+                    <div
+                      id="googleContainer"
+                      style={{ height: "45px", width: "250px" }}
+                    ></div>
+                  )}
                 </div>
               </>
             )}
@@ -320,10 +346,12 @@ const Navbar: React.FC = () => {
                 />
                 <button
                   onClick={verifyOtp}
-                  className="w-full bg-black text-white rounded-md py-2"
+                  disabled={verifyingOtp}
+                  className="w-full bg-black text-white rounded-md py-2 disabled:opacity-60"
                 >
-                  Verify OTP
+                  {verifyingOtp ? "Verifying..." : "Verify OTP"}
                 </button>
+
               </>
             )}
           </div>
