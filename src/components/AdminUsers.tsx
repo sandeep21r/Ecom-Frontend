@@ -18,7 +18,7 @@ const AdminUsers = () => {
   // ✅ Fetch all users
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/users", {
+      const res = await fetch("https://ecom-backend-9qo4.onrender.com/api/admin/users", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -49,7 +49,7 @@ const AdminUsers = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/users/${userId}`,
+        `https://ecom-backend-9qo4.onrender.com/api/admin/users/${userId}`,
         {
           method: "PUT",
           headers: {
